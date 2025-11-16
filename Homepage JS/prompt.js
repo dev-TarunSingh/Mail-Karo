@@ -29,49 +29,36 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
       document.head.appendChild(s);
     }
-
     outputText.innerHTML =
       '<span class="email-spinner" aria-hidden="true"></span><span>✉️ Generating your email...</span>';
     outputText.classList.add("loading");
 
-    // disable controls while waiting for response
-    generateBtn.dataset.origText =
-    generateBtn.dataset.origText || generateBtn.innerText;
+    // disable inputs and style button
     generateBtn.disabled = true;
     promptInput.disabled = true;
-    generateBtn.innerText = "Generating...";
-    generateBtn.style.backgroundColor = "#474646ff";
+    generateBtn.dataset.prevBg = generateBtn.style.backgroundColor || "";
+    generateBtn.dataset.prevCursor = generateBtn.style.cursor || "";
+    generateBtn.style.backgroundColor = "#FFD700";
+    generateBtn.style.cursor = "not-allowed";
 
-    // restore function
-    const restoreUI = () => {
-      generateBtn.disabled = false;
-      promptInput.disabled = false;
-      if (generateBtn.dataset.origText) {
-        generateBtn.innerText = generateBtn.dataset.origText;
-        delete generateBtn.dataset.origText;
-      }
-      generateBtn.style.backgroundColor = "#474646ff";
-    };
-
-    // re-enable when loading class is removed (or fallback after 30s)
-    const mo = new MutationObserver(() => {
-      if (!outputText.classList.contains("loading")) {
-        restoreUI();
-        mo.disconnect();
-        clearTimeout(fallbackTimer);
+    // re-enable when spinner/loading class is removed
+    const observer = new MutationObserver((mutationsList) => {
+      for (const m of mutationsList) {
+        if (m.type === "attributes" && m.attributeName === "class") {
+          if (!outputText.classList.contains("loading")) {
+            generateBtn.disabled = false;
+            promptInput.disabled = false;
+            generateBtn.style.backgroundColor = generateBtn.dataset.prevBg;
+            generateBtn.style.cursor = generateBtn.dataset.prevCursor;
+            delete generateBtn.dataset.prevBg;
+            delete generateBtn.dataset.prevCursor;
+            observer.disconnect();
+            break;
+          }
+        }
       }
     });
-    mo.observe(outputText, {
-      attributes: true,
-      attributeFilter: ["class"],
-      childList: true,
-    });
-
-    // safety fallback
-    const fallbackTimer = setTimeout(() => {
-      restoreUI();
-      mo.disconnect();
-    }, 30000);
+    observer.observe(outputText, { attributes: true, attributeFilter: ["class"] });
 
     // 📨 Fetch request to backend
     try {
